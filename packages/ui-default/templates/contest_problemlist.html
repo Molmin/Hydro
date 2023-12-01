@@ -50,7 +50,7 @@
                 <a href="{{ url('problem_detail', pid=pid, query={tid:tdoc.docId}) }}">
                   <b>{{ String.fromCharCode(65+loop.index0) }}</b>&nbsp;&nbsp;{{ pdict[pid].title }}
                 </a>
-                {% if tdoc.rule === "cf" %}
+                {% if tdoc.rule === "codeforces" %}
                   <a style="float: right; margin-left: 10px;" href="{{ url('record_main', query={tid:tdoc.docId, pid:pid, status:1}) }}" target="_blank">Hack</a>
                   <form style="float: right; margin-left: 10px;" action="{{ url('contest_problemlist', tid=tdoc.docId, query={pid:pid}) }}" method="POST">
                     <input type="hidden" name="operation" value="lock">

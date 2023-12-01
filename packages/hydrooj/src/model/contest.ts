@@ -569,7 +569,7 @@ const ledo = buildContestRule({
     },
 }, oi);
 
-const cf = buildContestRule({
+const codeforces = buildContestRule({
     TEXT: 'Codeforces',
     check: () => { },
     submitAfterAccept: false,
@@ -812,7 +812,7 @@ const homework = buildContestRule({
 });
 
 export const RULES: ContestRules = {
-    acm, oi, homework, ioi, ledo, strictioi, cf,
+    acm, oi, homework, ioi, ledo, strictioi, codeforces,
 };
 
 const collBalloon = db.collection('contest.balloon');
@@ -1079,7 +1079,7 @@ export const statusText = (tdoc: Tdoc, tsdoc?: any) => (
 
 export async function getLockedList(domainId: string, tid: ObjectId) {
     const tdoc = await document.get(domainId, document.TYPE_CONTEST, tid);
-    if (tdoc.rule !== 'cf') return null;
+    if (tdoc.rule !== 'codeforces') return null;
     return tdoc.lockedList;
 }
 
