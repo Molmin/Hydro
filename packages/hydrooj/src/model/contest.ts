@@ -659,6 +659,7 @@ const cf = buildContestRule({
         }
         return row;
     },
+    applyProjection: (_, rdoc) => rdoc,
 }, oi);
 
 const homework = buildContestRule({

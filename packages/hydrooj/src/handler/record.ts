@@ -59,7 +59,8 @@ class RecordListHandler extends ContestDetailBaseHandler {
             this.tdoc = tdoc;
             if (!tdoc) throw new ContestNotFoundError(domainId, pid);
             if (!contest.canShowScoreboard.call(this, tdoc, true)) throw new PermissionError(PERM.PERM_VIEW_CONTEST_HIDDEN_SCOREBOARD);
-            if (!contest[q.uid === this.user._id ? 'canShowSelfRecord' : 'canShowRecord'].call(this, tdoc, true, pid ? await problem.get(domainId, pid) : null)) {
+            if (!contest[q.uid === this.user._id ? 'canShowSelfRecord' : 'canShowRecord']
+                .call(this, tdoc, true, pid ? await problem.get(domainId, pid) : null)) {
                 throw new PermissionError(PERM.PERM_VIEW_CONTEST_HIDDEN_SCOREBOARD);
             }
             if (!(await contest.getStatus(domainId, tid, this.user._id))?.attend) {
