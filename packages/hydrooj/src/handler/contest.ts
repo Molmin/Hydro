@@ -115,6 +115,7 @@ export class ContestListHandler extends Handler {
 export class ContestDetailBaseHandler extends Handler {
     tdoc?: Tdoc;
     tsdoc?: any;
+    locked?: number[];
 
     @param('tid', Types.ObjectId, true)
     async __prepare(domainId: string, tid: ObjectId) {
@@ -131,6 +132,10 @@ export class ContestDetailBaseHandler extends Handler {
         }
         if (this.tdoc.duration && this.tsdoc?.startAt) {
             this.tsdoc.endAt = moment(this.tsdoc.startAt).add(this.tdoc.duration, 'hours').toDate();
+        }
+        if (this.tdoc.lockedList) {
+            this.locked = this.tdoc.pids.filter((pid) => this.tdoc.lockedList[pid].includes(this.user._id));
+            delete this.tdoc.lockedList;
         }
     }
 
@@ -265,7 +270,7 @@ export class ContestProblemListHandler extends ContestDetailBaseHandler {
             contest.getMultiClarification(domainId, tid, this.user._id),
         ]);
         this.response.body = {
-            pdict, psdict: {}, udict, rdict: {}, tdoc: this.tdoc, tsdoc: this.tsdoc, tcdocs,
+            pdict, psdict: {}, udict, rdict: {}, tdoc: this.tdoc, tsdoc: this.tsdoc, tcdocs, locked: this.locked,
         };
         this.response.template = 'contest_problemlist.html';
         if (!this.tsdoc) return;
@@ -317,6 +322,7 @@ export class ContestProblemListHandler extends ContestDetailBaseHandler {
         const lockList = await contest.getLockedList(domainId, tid);
         if (!lockList) throw new ProblemLockError('This contest is not lockable.');
         if (lockList[pid].includes(this.user._id)) throw new ProblemLockError('This problem has Locked before.');
+        if (this.tsdoc.detail[pid].status !== STATUS.STATUS_ACCEPTED) throw new ProblemLockError('This problem is not accepted.');
         lockList[pid].push(this.user._id);
         await contest.updateLockedList(domainId, tid, lockList);
         this.back();

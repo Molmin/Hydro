@@ -51,17 +51,16 @@
                   <b>{{ String.fromCharCode(65+loop.index0) }}</b>&nbsp;&nbsp;{{ pdict[pid].title }}
                 </a>
                 {% if tdoc.rule === "codeforces" %}
+                  {% if locked.includes(pid) %}
                   <a style="float: right; margin-left: 10px;" href="{{ url('record_main', query={tid:tdoc.docId, pid:pid, status:1}) }}" target="_blank">Hack</a>
+                  {% elif psdict[pid].status === STATUS.STATUS_ACCEPTED %}
                   <form style="float: right; margin-left: 10px;" action="{{ url('contest_problemlist', tid=tdoc.docId, query={pid:pid}) }}" method="POST">
                     <input type="hidden" name="operation" value="lock">
                     <button class="btn--lock" type="submit">
-                      {% if not tdoc.lockedList[pid].includes(handler.user._id) %}
-                        Lock
-                      {% else %}
-                        Locked
-                      {% endif %}
+                      Lock
                     </button>
                   </form>
+                  {% endif %}
                 {% endif %}
               </td>
             </tr>
