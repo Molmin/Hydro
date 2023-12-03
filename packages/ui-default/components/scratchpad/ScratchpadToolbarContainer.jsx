@@ -126,7 +126,7 @@ export default connect(mapStateToProps, mapDispatchToProps)(class ScratchpadTool
         )}
         <ToolbarButton
           disabled={this.props.isPosting || !!this.props.submitWaitSec || 
-            (UiContext.tdoc && UiContext.tdoc.lockedList[UiContext.pdoc.docId].includes(UserContext._id))}
+            (UiContext.tdoc && UiContext.tsdoc.locked.includes(UiContext.pdoc.docId))}
           className="scratchpad__toolbar__submit"
           onClick={() => this.props.postSubmit(this.props)}
           data-global-hotkey="f10"

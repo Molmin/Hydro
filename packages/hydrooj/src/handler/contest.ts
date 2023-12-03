@@ -134,7 +134,7 @@ export class ContestDetailBaseHandler extends Handler {
             this.tsdoc.endAt = moment(this.tsdoc.startAt).add(this.tdoc.duration, 'hours').toDate();
         }
         if (this.tdoc.lockedList) {
-            this.locked = this.tdoc.pids.filter((pid) => this.tdoc.lockedList[pid].includes(this.user._id));
+            this.tsdoc.locked = this.tdoc.pids.filter((pid) => this.tdoc.lockedList[pid].includes(this.user._id));
             delete this.tdoc.lockedList;
         }
     }
@@ -270,7 +270,7 @@ export class ContestProblemListHandler extends ContestDetailBaseHandler {
             contest.getMultiClarification(domainId, tid, this.user._id),
         ]);
         this.response.body = {
-            pdict, psdict: {}, udict, rdict: {}, tdoc: this.tdoc, tsdoc: this.tsdoc, tcdocs, locked: this.locked,
+            pdict, psdict: {}, udict, rdict: {}, tdoc: this.tdoc, tsdoc: this.tsdoc, tcdocs,
         };
         this.response.template = 'contest_problemlist.html';
         if (!this.tsdoc) return;

@@ -267,7 +267,9 @@ const page = new NamedPage(['problem_detail', 'contest_detail_problem', 'homewor
       loadAns();
       $('.problem-content .typo').append(document.getElementsByClassName('nav__item--round').length
         ? `<input type="submit" disabled class="button rounded primary disabled" value="${i18n('Login to Submit')}" />`
-        : `<input type="submit" class="button rounded primary" value="${i18n('Submit')}" />`);
+        : UiContext.tsdoc.locked.includes(UiContext.pdoc.docId)
+          ? `<input type="submit" disabled class="button rounded primary disabled" value="${i18n('Locked')}" />`
+          : `<input type="submit" class="button rounded primary" value="${i18n('Submit')}" />`);
       $('.objective-input[type!=checkbox]').on('input', (e) => {
         ans[e.target.name] = e.target.value;
         saveAns();

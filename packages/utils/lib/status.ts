@@ -92,7 +92,7 @@ export function getScoreColor(score: number | string): string {
         '#b0d628',
         '#93b127',
         '#25ad40',
-    ][Math.floor((Number(score) || 0) / 10)];
+    ][Math.min(Math.floor((Number(score) || 0) / 10), 10)];
 }
 
 export const USER_GENDER_MALE = 0;

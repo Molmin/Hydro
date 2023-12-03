@@ -51,7 +51,7 @@
                   <b>{{ String.fromCharCode(65+loop.index0) }}</b>&nbsp;&nbsp;{{ pdict[pid].title }}
                 </a>
                 {% if tdoc.rule === "codeforces" %}
-                  {% if locked.includes(pid) %}
+                  {% if tsdoc.locked.includes(pid) %}
                   <a style="float: right; margin-left: 10px;" href="{{ url('record_main', query={tid:tdoc.docId, pid:pid, status:1}) }}" target="_blank">Hack</a>
                   {% elif psdict[pid].status === STATUS.STATUS_ACCEPTED %}
                   <form style="float: right; margin-left: 10px;" action="{{ url('contest_problemlist', tid=tdoc.docId, query={pid:pid}) }}" method="POST">

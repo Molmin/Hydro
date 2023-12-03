@@ -385,6 +385,7 @@ export class ProblemDetailHandler extends ContestDetailBaseHandler {
         if (this.tdoc && this.tsdoc) {
             const fields = ['attend', 'startAt'];
             if (this.tdoc.duration) fields.push('endAt');
+            if (this.tsdoc.locked) fields.push('locked');
             if (contest.canShowSelfRecord.call(this, this.tdoc, true)) fields.push('detail');
             this.tsdoc = pick(this.tsdoc, fields);
             this.response.body.tsdoc = this.tsdoc;
