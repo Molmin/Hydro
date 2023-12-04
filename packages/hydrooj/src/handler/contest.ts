@@ -115,7 +115,6 @@ export class ContestListHandler extends Handler {
 export class ContestDetailBaseHandler extends Handler {
     tdoc?: Tdoc;
     tsdoc?: any;
-    locked?: number[];
 
     @param('tid', Types.ObjectId, true)
     async __prepare(domainId: string, tid: ObjectId) {
