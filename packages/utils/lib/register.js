@@ -1,4 +1,3 @@
-/* eslint-disable logical-assignment-operators */
 const map = {};
 require('source-map-support').install({
     handleUncaughtExceptions: false,
@@ -18,8 +17,7 @@ const vm = require('vm');
 const fs = require('fs-extra');
 const esbuild = require('esbuild');
 
-// Node14 doesn't support ||= syntax
-process.env.NODE_APP_INSTANCE = process.env.NODE_APP_INSTANCE || '0';
+process.env.NODE_APP_INSTANCE ||= '0';
 const major = +process.version.split('.')[0].split('v')[1];
 const minor = +process.version.split('.')[1];
 
@@ -36,6 +34,10 @@ function transform(filename) {
     });
     if (result.warnings.length) console.warn(result.warnings);
     map[filename] = result.map;
+    if (process.env.LOADER_DUMP_CODE && filename.endsWith(`/${process.env.LOADER_DUMP_CODE}`)) {
+        console.log(`-----${filename}-----`);
+        console.log(result.code.split('/# sourceMappingURL=')[0]);
+    }
     return result.code;
 }
 const _script = new vm.Script('"Hydro"', { produceCachedData: true });
@@ -89,4 +91,4 @@ if (argv.options.debug) {
     console.log('Debug mode enabled');
     process.env.NODE_ENV = 'development';
     process.env.DEV = 'on';
-} else process.env.NODE_ENV = process.env.NODE_ENV || 'production';
+} else process.env.NODE_ENV ||= 'production';

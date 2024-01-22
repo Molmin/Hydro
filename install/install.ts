@@ -164,6 +164,7 @@ const Caddyfile = `\
 # 请注意在防火墙/安全组中放行端口，且部分运营商会拦截未经备案的域名。
 # For more information, refer to caddy v2 documentation.
 :80 {
+  encode zstd gzip
   log {
     output file /data/access.log {
       roll_size 1gb
@@ -321,7 +322,7 @@ ${nixConfBase}`);
                 exec('nix-channel --add https://nixos.org/channels/nixpkgs-unstable nixpkgs', { stdio: 'inherit' });
                 exec('nix-channel --update', { stdio: 'inherit' });
             },
-            'nix-env -iA nixpkgs.pm2 nixpkgs.yarn nixpkgs.esbuild nixpkgs.bash nixpkgs.unzip nixpkgs.zip nixpkgs.diffutils',
+            'nix-env -iA nixpkgs.pm2 nixpkgs.yarn nixpkgs.esbuild nixpkgs.bash nixpkgs.unzip nixpkgs.zip nixpkgs.diffutils nixpkgs.patch',
             async () => {
                 const rl = createInterface(process.stdin, process.stdout);
                 try {
@@ -377,7 +378,7 @@ ${nixConfBase}`);
     {
         init: 'install.compiler',
         operations: [
-            'nix-env -iA nixpkgs.gcc nixpkgs.fpc nixpkgs.python3',
+            'nix-env -iA nixpkgs.gcc nixpkgs.python3',
         ],
     },
     {
