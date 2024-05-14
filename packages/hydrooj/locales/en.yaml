@@ -1,6 +1,7 @@
 __id: en
 __langname: English
 Can be Extended For: Extension
+contest_balloon: Balloon Status
 contest_create: Contest Create
 contest_detail_problem_submit: Submit Contest Problem
 contest_detail_problem: Problem Detail
@@ -38,7 +39,10 @@ home_security: Security
 homepage: Home
 homework_create: Homework Create
 homework_detail_problem_submit: Submit Homework Problem
+homework_detail_problem: Homework Problem Detail
+homework_detail: 作业详情
 homework_edit: Homework Edit
+homework_files: Homework Files
 homework_main: Homework
 homework_scoreboard: Scoreboard
 judge_playground: Judge Playground

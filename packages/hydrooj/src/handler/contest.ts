@@ -298,6 +298,18 @@ export class ContestProblemListHandler extends ContestDetailBaseHandler {
         }
         this.back();
     }
+
+    @param('tid', Types.ObjectId)
+    @param('pid', Types.UnsignedInt)
+    async postLock(domainId: string, tid: ObjectId, pid: number) {
+        const lockedList = await contest.getLockedList(domainId, tid);
+        if (!lockedList) throw new BadRequestError('This contest is not hackable.');
+        if (lockedList[pid].includes(this.user._id)) throw new BadRequestError('You have already locked this problem.');
+        if (this.tsdoc.detail[pid].status !== STATUS.STATUS_ACCEPTED) throw new BadRequestError('Cannot lock problems that have not been accepted.');
+        lockedList[pid].push(this.user._id);
+        await contest.updateLockedList(domainId, tid, lockedList);
+        this.back();
+    }
 }
 
 export class ContestScoreboardHandler extends ContestDetailBaseHandler {

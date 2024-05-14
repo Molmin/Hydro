@@ -115,6 +115,7 @@ Calendar: 日历
 Can be Extended For: 可延期
 Cancel Score: 取消成绩
 Cancel: 取消
+Cannot lock problems that have not been accepted.: 不能锁定还未通过的题目。
 Categories: 分类
 Category: 分类
 CDN Prefix: CDN 路径前缀
@@ -794,6 +795,7 @@ Their account will not be deleted and they will be with the default role.: 他�
 theme: 主题
 There are no contests...: 没有比赛…
 There is no homework so far ╰(*°▽°*)╯: 目前还没有作业 ╰(*°▽°*)╯
+This contest is not hackable.: 该比赛不支持 Hack。
 This contest is not live.: 比赛没有开始。
 This email was sent by {0} automatically, and please do not reply directly.: 这封邮件由 {0} 自动发送，请勿直接回复。
 This homework is not open and you cannot view problems.: 该作业还未到开放时间，您无法查看作业题目。
@@ -932,6 +934,7 @@ You cannot visit this domain.: 您不能访问此域。
 You don't have the required permission ({0}) in this domain.: 您在该域中无相应权限 ({0})。
 You don't have the required privilege.: 您没有相应的特权。
 You don't own any domain and don't have privilege to create domain.: 您不拥有任何域也没有创建域的特权。
+You have already locked this problem.: 您已经锁定了此题。
 You have not submitted any solutions for this problem: 您在该题下没有递交过任何解答
 You have permission to create problems for this domain.: 您有权限为此域创建题目。
 You have uncompleted domain creation operation. You can click "Continue" to finish the creation.: 您有未完成的创建域操作。您可以点击“继续”来完成创建。

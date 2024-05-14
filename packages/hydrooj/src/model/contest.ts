@@ -16,7 +16,7 @@ import type { Handler } from '../service/server';
 import { Optional } from '../typeutils';
 import { PERM, STATUS, STATUS_SHORT_TEXTS } from './builtin';
 import * as document from './document';
-import problem from './problem';
+import problem, { ProblemDoc } from './problem';
 import user, { User } from './user';
 
 interface AcmJournal {
@@ -90,6 +90,7 @@ const acm = buildContestRule({
     check: () => { },
     statusSort: { accept: -1, time: 1 },
     submitAfterAccept: false,
+    hackable: false,
     showScoreboard: (tdoc, now) => now > tdoc.beginAt,
     showSelfRecord: () => true,
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -275,6 +276,7 @@ const oi = buildContestRule({
     TEXT: 'OI',
     check: () => { },
     submitAfterAccept: true,
+    hackable: false,
     statusSort: { score: -1 },
     stat(tdoc, journal) {
         const npending = Counter();
@@ -603,6 +605,7 @@ const homework = buildContestRule({
     hidden: true,
     check: () => { },
     submitAfterAccept: false,
+    hackable: true,
     statusSort: { penaltyScore: -1, time: 1 },
     stat: (tdoc, journal) => {
         const effective = {};
@@ -761,8 +764,22 @@ const homework = buildContestRule({
     },
 });
 
+const codeforces = buildContestRule({
+    applyProjection(tdoc, rdoc) {
+        if (isDone(tdoc)) return rdoc;
+        delete rdoc.time;
+        delete rdoc.memory;
+        rdoc.testCases = [];
+        rdoc.judgeTexts = [];
+        delete rdoc.subtasks;
+        delete rdoc.score;
+        if (rdoc.status === STATUS.STATUS_HACKED) rdoc.status = STATUS.STATUS_ACCEPTED;
+        return rdoc;
+    },
+}, oi);
+
 export const RULES: ContestRules = {
-    acm, oi, homework, ioi, ledo, strictioi,
+    acm, oi, homework, ioi, ledo, strictioi, codeforces,
 };
 
 const collBalloon = db.collection('contest.balloon');
@@ -784,7 +801,7 @@ export async function add(
     RULES[rule].check(data);
     await bus.parallel('contest/before-add', data);
     const res = await document.add(domainId, content, owner, document.TYPE_CONTEST, null, null, null, {
-        ...data, title, rule, beginAt, endAt, pids, attend: 0, rated,
+        ...data, title, rule, beginAt, endAt, pids, attend: 0, rated, lockedList: pids.reduce((acc, curr) => ({ ...acc, [curr]: [] }), {}),
     });
     await bus.parallel('contest/add', data, res);
     return res;
@@ -948,8 +965,8 @@ export function canViewHiddenScoreboard(this: { user: User }, tdoc: Tdoc) {
     return this.user.hasPerm(PERM.PERM_VIEW_CONTEST_HIDDEN_SCOREBOARD);
 }
 
-export function canShowRecord(this: { user: User }, tdoc: Tdoc, allowPermOverride = true) {
-    if (RULES[tdoc.rule].showRecord(tdoc, new Date())) return true;
+export function canShowRecord(this: { user: User }, tdoc: Tdoc, allowPermOverride = true, pdoc?: ProblemDoc) {
+    if (RULES[tdoc.rule].showRecord(tdoc, new Date(), this.user, pdoc)) return true;
     if (allowPermOverride && canViewHiddenScoreboard.call(this, tdoc)) return true;
     return false;
 }
@@ -1017,6 +1034,18 @@ export function applyProjection(tdoc: Tdoc, rdoc: RecordDoc, udoc: User) {
     return RULES[tdoc.rule].applyProjection(tdoc, rdoc, udoc);
 }
 
+export async function getLockedList(domainId: string, tid: ObjectId) {
+    const tdoc = await document.get(domainId, document.TYPE_CONTEST, tid);
+    if (!RULES[tdoc.rule].hackable) return null;
+    return tdoc.lockedList;
+}
+
+export async function updateLockedList(domainId: string, tid: ObjectId, $lockList: any) {
+    const tdoc = await document.get(domainId, document.TYPE_CONTEST, tid);
+    tdoc.lockedList = $lockList;
+    edit(domainId, tid, tdoc);
+}
+
 export const statusText = (tdoc: Tdoc, tsdoc?: any) => (
     isNew(tdoc)
         ? 'New'
@@ -1068,4 +1097,6 @@ global.Hydro.model.contest = {
     isExtended,
     applyProjection,
     statusText,
+    getLockedList,
+    updateLockedList,
 };
