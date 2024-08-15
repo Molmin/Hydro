@@ -2,11 +2,11 @@
 import { animated, easings, useSprings } from '@react-spring/web';
 import useKey from 'react-use/lib/useKey';
 import {
-  addPage, NamedPage, React, ReactDOM, request, sleep,
+  addPage, NamedPage, React, ReactDOM, request,
 } from '@hydrooj/ui-default';
 import { ResolverInput } from '../interface';
 
-function convertPayload(ghost: string, lock: number): ResolverInput {
+function convertPayload(ghost: string): ResolverInput {
   const lines = ghost.split('\n');
 
   const problemCount = +(lines[2].split(' ')[1]);
@@ -14,15 +14,29 @@ function convertPayload(ghost: string, lock: number): ResolverInput {
   const submissionCount = +(lines[4].split(' ')[1]);
   const data: ResolverInput = {
     name: lines[0].split('"')[1].split('"')[0],
-    frozen: +lock || 1800,
+    // frozen: (3.5 - 0.75) * 60 * 60,
+    frozen: (2 - 1) * 60 * 60,
     teams: [],
     submissions: [],
+    duration: 0,
+    problems: [],
+    institutions: {},
   };
+  for (let i = 5; i < 5 + problemCount; i++) {
+    const problem = lines[i].match(/@p (.+),.+,20,0/);
+    // @p A,Two Regular Polygons,20,0
+    if (!problem) continue;
+    data.problems.push({
+      color: '#000000',
+      id: problem[1],
+      name: problem[1],
+    });
+  }
   for (let i = 5 + problemCount; i < 5 + problemCount + teamCount; i++) {
     const team = lines[i].match(/@t (\d+),\d+,\d+,(.*)/);
     if (!team) continue;
     data.teams.push({
-      id: team[2].split('-')[1],
+      id: team[1],
       name: team[2].split('-')[1],
       institution: team[2].split('-')[0],
       exclude: false,
@@ -102,10 +116,12 @@ function start(data: ResolverInput, options: DisplaySettings) {
       id: v.id,
     })),
   }));
+  console.info(teams);
   const allSubmissions = data.submissions.sort((a, b) => a.time - b.time);
   const allAc = allSubmissions.filter((i) => i.verdict === 'AC');
   for (const submission of allSubmissions) {
     const team = teams.find((v) => v.id === submission.team);
+    console.info(submission, team, submission.time, data.frozen);
     if (!team) continue;
     const isFrozen = submission.time > data.frozen;
     const problem = team.problems.find((i) => i.id === submission.problem);
@@ -210,7 +226,7 @@ function start(data: ResolverInput, options: DisplaySettings) {
         ops.push({ name, args });
       }
       let order = processRank(clone);
-      for (let i = clone.length - 1; i > 0; i--) {
+      for (let i = clone.length - 1; i >= 0; i--) {
         const team = clone[order[i]];
         queueOperations('highlightTeam', team.id, i);
         for (const pinfo of data.problems) {
@@ -253,6 +269,7 @@ function start(data: ResolverInput, options: DisplaySettings) {
     }, [data]);
 
     useKey('ArrowRight', async () => {
+      console.info(calculated, executeIdx);
       const op = calculated[executeIdx];
       if (!op) return;
       setExecuteIdx(executeIdx + 1);
@@ -308,37 +325,29 @@ function start(data: ResolverInput, options: DisplaySettings) {
   ReactDOM.createRoot(document.getElementById('rank-list')!).render(<MainList {...options} data={data} />);
 }
 
-async function loadAndStart(input: string, lock = 0, options: DisplaySettings) {
+async function loadAndStart(input: string, options: DisplaySettings) {
   let data;
   try {
-    if (input.startsWith('@')) data = convertPayload(input, lock);
+    if (input.startsWith('@')) data = convertPayload(input);
     else data = JSON.parse(input);
   } catch (e) {
     console.log(`load data from url. [url=${input}]`);
     const res = await request.get(input, {}, {
       dataType: 'text',
     });
-    if (res.startsWith('@')) data = convertPayload(res, lock);
+    if (res.startsWith('@')) data = convertPayload(res);
     else data = JSON.parse(res);
   }
   start(data, options);
 }
 
 addPage(new NamedPage(['resolver'], () => {
-  const current = new URL(window.location.href);
-  const input = current.searchParams.get('input');
-  if (input) {
-    loadAndStart(input, +(current.searchParams.get('lock') || 0), {
-      showAvatar: true,
-      showSchool: true,
-    });
-  }
   $('#load').on('click', () => {
     const src = $('#input-data').val()?.toString()?.trim();
     if (src) {
-      loadAndStart(src, +($('[name="lock"]').val() || 0), {
-        showAvatar: $('#show-avatar').prop('checked') || false,
-        showSchool: $('#show-school').prop('checked') || false,
+      loadAndStart(src, {
+        showAvatar: false,
+        showSchool: false,
       });
     }
   });

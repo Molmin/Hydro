@@ -48,7 +48,7 @@
 }
 .uncover {
     animation: flashing 300ms infinite;
-    -webkit-animation: flashing 30ms infinite; /*Safari and Chrome*/
+    -webkit-animation: flashing 300ms infinite; /*Safari and Chrome*/
 }
 @keyframes flashing {
     from { background-color: #8a6d3b }
