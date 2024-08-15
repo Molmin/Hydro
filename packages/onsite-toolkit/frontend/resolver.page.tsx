@@ -15,7 +15,7 @@ function convertPayload(ghost: string): ResolverInput {
   const data: ResolverInput = {
     name: lines[0].split('"')[1].split('"')[0],
     // frozen: (3.5 - 0.75) * 60 * 60,
-    frozen: (2 - 1) * 60 * 60,
+    frozen: (4 - 1) * 60 * 60,
     teams: [],
     submissions: [],
     duration: 0,
@@ -50,6 +50,7 @@ function convertPayload(ghost: string): ResolverInput {
       problem: line[1],
       verdict: line[4] as 'AC' | 'RJ',
       time: +(line[3]),
+      score: +(line[5]),
     });
   }
   return data;
@@ -92,10 +93,10 @@ function status(problem) {
 
 function submissions(problem) {
   const st = status(problem);
-  if (st === 'ac') { return `${problem.old}`; }
-  if (st === 'frozen') { return `${problem.old}+${problem.frozen}`; }
-  if (st === 'failed') { return problem.old; }
-  return String.fromCharCode('A'.charCodeAt(0) + problem.problem_index);
+  // if (st === 'ac') { return `${problem.old}`; }
+  if (st === 'frozen') { return `${problem.score}+${problem.frozen}`; }
+  if (st === 'ac' || st === 'failed') { return `${problem.score}`; }
+  return problem.id;
 }
 
 function start(data: ResolverInput, options: DisplaySettings) {
@@ -114,6 +115,7 @@ function start(data: ResolverInput, options: DisplaySettings) {
       frozen: 0,
       pass: false,
       id: v.id,
+      score: 0,
     })),
   }));
   console.info(teams);
@@ -131,8 +133,11 @@ function start(data: ResolverInput, options: DisplaySettings) {
     else {
       if (submission.verdict === 'AC') {
         problem.pass = true;
-        team.score += 1;
-        team.penalty += submission.time + problem.old * 20 * 60;
+        // team.penalty += submission.time + problem.old * 20 * 60;
+      }
+      if (submission.score > problem.score) {
+        team.score += submission.score - problem.score;
+        problem.score = submission.score;
       }
       problem.old += 1;
     }
@@ -182,26 +187,18 @@ function start(data: ResolverInput, options: DisplaySettings) {
         const team = teams.find((i) => i.id === teamId);
         const problem = team?.problems.find((i) => i.id === problemId);
         if (!team || !problem) return;
-        if (allAc.find((s) => s.team === teamId && s.problem === problemId)) {
-          const sub = allSubmissions.filter((s) => s.team === teamId && s.problem === problemId);
-          let penalty = 0;
-          for (const s of sub) {
-            if (s.verdict !== 'AC') {
-              penalty += 20 * 60;
-              problem.old++;
-            } else {
-              penalty += s.time;
-              break;
-            }
+        const sub = allSubmissions.filter((s) => s.team === teamId && s.problem === problemId);
+        for (const s of sub) {
+          if (s.verdict === 'AC') {
+            problem.pass = true;
           }
-          team.penalty += penalty;
-          team.score += 1;
-          problem.pass = true;
-          problem.frozen = 0;
-        } else {
-          problem.old += problem.frozen;
-          problem.frozen = 0;
+          if (s.score > problem.score) {
+            team.score += s.score - problem.score;
+            problem.score = s.score;
+          }
+          problem.old += 1;
         }
+        problem.frozen = 0;
         setP(null);
       },
       async updateRank() {
@@ -235,22 +232,20 @@ function start(data: ResolverInput, options: DisplaySettings) {
           queueOperations('highlightProblem', pinfo.id);
           queueOperations('revealProblem', team.id, pinfo.id);
           // scroll to selected line
-          if (allAc.find((s) => s.team === team.id && s.problem === problem.id)) {
-            const sub = allSubmissions.filter((s) => s.team === team.id && s.problem === problem.id);
-            let penalty = 0;
-            for (const s of sub) {
-              if (s.verdict !== 'AC') {
-                penalty += 20 * 60;
-                problem.old++;
-              } else {
-                penalty += s.time;
-                break;
-              }
+          const oldScore = problem.score;
+          const sub = allSubmissions.filter((s) => s.team === team.id && s.problem === problem.id);
+          for (const s of sub) {
+            if (s.verdict === 'AC') {
+              problem.pass = true;
             }
-            team.penalty += penalty;
-            team.score += 1;
-            problem.pass = true;
-            problem.frozen = 0;
+            if (s.score > problem.score) {
+              team.score += s.score - problem.score;
+              problem.score = s.score;
+            }
+            problem.old += 1;
+          }
+          problem.frozen = 0;
+          if (problem.score > oldScore) {
             queueOperations('updateRank');
             const oldOrder = JSON.stringify(order);
             order = processRank(clone);
@@ -258,9 +253,6 @@ function start(data: ResolverInput, options: DisplaySettings) {
               i++;
               break;
             }
-          } else {
-            problem.old += problem.frozen;
-            problem.frozen = 0;
           }
         }
       }
@@ -315,7 +307,7 @@ function start(data: ResolverInput, options: DisplaySettings) {
                 })}
               </ul>
             </div>
-            <div className="penalty" style={{ color: 'white' }}>{Math.floor(team.penalty / 60)}</div>
+            {/* <div className="penalty" style={{ color: 'white' }}>{Math.floor(team.penalty / 60)}</div> */}
             <div className="solved" style={{ color: 'white' }}>{team.score}</div>
           </>}
         />;

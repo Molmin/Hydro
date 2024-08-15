@@ -20,6 +20,7 @@ export interface SubmissionInfo {
     team: string;
     problem: string;
     verdict: Verdict;
+    score: number;
     time: number; // in seconds
 }
 export interface ResolverInput {
