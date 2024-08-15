@@ -14,8 +14,8 @@ function convertPayload(ghost: string): ResolverInput {
   const submissionCount = +(lines[4].split(' ')[1]);
   const data: ResolverInput = {
     name: lines[0].split('"')[1].split('"')[0],
-    // frozen: (3.5 - 0.75) * 60 * 60,
-    frozen: (4 - 1) * 60 * 60,
+    frozen: (3.5 - 0.75) * 60 * 60,
+    // frozen: (4 - 1) * 60 * 60,
     teams: [],
     submissions: [],
     duration: 0,
@@ -152,10 +152,17 @@ function start(data: ResolverInput, options: DisplaySettings) {
     function processRank(source = teams) {
       const clone = [...source];
       clone.sort((a, b) => b.score - a.score || a.penalty - b.penalty || b.total - a.total);
-      let rank = 1;
+      let rank = 1, lastScore = Infinity, lastRank = 0;
       for (const team of clone) {
         if (team.ranked) {
-          team.rank = rank;
+          if (lastScore === team.score) {
+            team.rank = lastRank;
+          }
+          else {
+            lastScore = team.score;
+            lastRank = rank;
+            team.rank = rank;
+          }
           rank++;
         } else {
           team.rank = -1;
