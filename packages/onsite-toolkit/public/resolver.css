@@ -37,6 +37,9 @@
 .ac {
     background-color: #5eb95e;
 }
+.ac.firstAccept {
+    background-color: #497955;
+}
 .failed, .WA {
     background-color: #dd514c;
 }

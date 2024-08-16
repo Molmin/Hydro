@@ -110,17 +110,18 @@ function start(data: ResolverInput, options: DisplaySettings) {
     penalty: 0,
     ranked: !v.exclude,
     total: 0,
-    problems: data.problems.map((v) => ({
+    problems: data.problems.map((p) => ({
       old: 0,
       frozen: 0,
       pass: false,
-      id: v.id,
+      id: p.id,
       score: 0,
+      firstAccept: false,
     })),
   }));
+  const firstAccepted: Record<string, boolean> = {};
   console.info(teams);
   const allSubmissions = data.submissions.sort((a, b) => a.time - b.time);
-  const allAc = allSubmissions.filter((i) => i.verdict === 'AC');
   for (const submission of allSubmissions) {
     const team = teams.find((v) => v.id === submission.team);
     console.info(submission, team, submission.time, data.frozen);
@@ -129,6 +130,10 @@ function start(data: ResolverInput, options: DisplaySettings) {
     const problem = team.problems.find((i) => i.id === submission.problem);
     if (!problem || problem.pass) continue;
     team.total++;
+    if (submission.verdict === 'AC' && !firstAccepted[submission.problem]) {
+      problem.firstAccept = true;
+      firstAccepted[submission.problem] = true;
+    }
     if (isFrozen) problem.frozen += 1;
     else {
       if (submission.verdict === 'AC') {
@@ -152,13 +157,12 @@ function start(data: ResolverInput, options: DisplaySettings) {
     function processRank(source = teams) {
       const clone = [...source];
       clone.sort((a, b) => b.score - a.score || a.penalty - b.penalty || b.total - a.total);
-      let rank = 1, lastScore = Infinity, lastRank = 0;
+      let rank = 1; let lastScore = Infinity; let lastRank = 0;
       for (const team of clone) {
         if (team.ranked) {
           if (lastScore === team.score) {
             team.rank = lastRank;
-          }
-          else {
+          } else {
             lastScore = team.score;
             lastRank = rank;
             team.rank = rank;
@@ -308,8 +312,14 @@ function start(data: ResolverInput, options: DisplaySettings) {
                 {data.problems.map((v) => {
                   const uncover = team?.id === selectedTeam && selectedProblem === v.id;
                   const problemStatus = team.problems.find((i) => i.id === v.id);
+                  const className = [
+                    status(problemStatus),
+                    uncover ? 'uncover' : '',
+                    'p-content',
+                    problemStatus?.firstAccept ? 'firstAccept' : '',
+                  ].join(' ');
                   return <li className={`${status(problemStatus)} ${uncover ? 'uncover' : ''} item`}>
-                    <div className={`${status(problemStatus)} ${uncover ? 'uncover' : ''} p-content`}>{submissions(problemStatus)}</div>
+                    <div className={className}>{submissions(problemStatus)}</div>
                   </li>;
                 })}
               </ul>
