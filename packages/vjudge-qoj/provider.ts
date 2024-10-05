@@ -192,7 +192,7 @@ export default class QOJProvider extends BasicFetcher implements IBasicProvider 
             try {
                 memory = parseMemoryMB(summary.children[5].innerHTML) * 1024;
             } catch (e) { }
-            if (document.querySelector('tbody').innerHTML.includes('Judging')) {
+            if (document.querySelector('tbody').innerHTML.includes('Judging') || document.querySelector('tbody').innerHTML.includes('Waiting')) {
                 await next({ status: STATUS.STATUS_JUDGING });
                 continue;
             }
