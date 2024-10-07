@@ -1,0 +1,10 @@
+<div class="section side nojs--hide">
+  <div class="section__header">
+    <h1 class="section__title">{{ _(payload.title) }}</h1>
+  </div>
+  <div class="section__body typo">
+    {%- for item in payload.dates -%}
+      <p>{{ _('There are {0} days left until {1}.').format(item.remaining, item.name) }}</p>
+    {%- endfor -%}
+  </div>
+</div>
