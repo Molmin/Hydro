@@ -246,6 +246,7 @@ SystemSetting(
     Setting('setting_server', 'server.upload', '256m', 'text', 'server.upload', 'Max upload file size'),
     Setting('setting_server', 'server.cdn', '/', 'text', 'server.cdn', 'CDN Prefix'),
     Setting('setting_server', 'server.ws', '/', 'text', 'server.ws', 'WebSocket Prefix'),
+    Setting('setting_server', 'server.host', '127.0.0.1', 'text', 'server.host', 'Listen host'),
     Setting('setting_server', 'server.port', 8888, 'number', 'server.port', 'Server Port'),
     Setting('setting_server', 'server.xff', null, 'text', 'server.xff', 'IP Header'),
     Setting('setting_server', 'server.xhost', null, 'text', 'server.xhost', 'Hostname Header'),
@@ -270,6 +271,7 @@ SystemSetting(
     Setting('setting_basic', 'default.priv', builtin.PRIV.PRIV_DEFAULT, 'number', 'default.priv', 'Default Privilege', FLAG_HIDDEN),
     Setting('setting_basic', 'discussion.nodes', builtin.DEFAULT_NODES, 'yaml', 'discussion.nodes', 'Discussion Nodes'),
     Setting('setting_basic', 'problem.categories', builtin.CATEGORIES, 'yaml', 'problem.categories', 'Problem Categories'),
+    Setting('setting_basic', 'training.enrolled-users', true, 'boolean', 'training.enrolled-users', 'Show enrolled users for training'),
     Setting('setting_basic', 'pagination.problem', 100, 'number', 'pagination.problem', 'Problems per page'),
     Setting('setting_basic', 'pagination.contest', 20, 'number', 'pagination.contest', 'Contests per page'),
     Setting('setting_basic', 'pagination.discussion', 50, 'number', 'pagination.discussion', 'Discussions per page'),
@@ -299,8 +301,10 @@ declare module 'cordis' {
 
 const T = <F extends (...args: any[]) => any>(origFunc: F, disposeFunc?) =>
     function method(this: cordis.Service, ...args: Parameters<F>) {
-        const res = origFunc(...args);
-        this[Context.current]?.on('dispose', () => (disposeFunc ? disposeFunc(res) : res()));
+        this.ctx.effect(() => {
+            const res = origFunc(...args);
+            return () => (disposeFunc ? disposeFunc(res) : res());
+        });
     };
 
 export class SettingService extends Service {
@@ -311,11 +315,10 @@ export class SettingService extends Service {
     SystemSetting = T(SystemSetting);
     constructor(ctx: Context) {
         super(ctx, 'setting', true);
-        ctx.mixin('setting', ['PreferenceSetting', 'AccountSetting', 'DomainSetting', 'DomainUserSetting', 'SystemSetting']);
     }
 
     get(key: string) {
-        return (this[Context.current] ? this[Context.current].domain?.config?.[key.replace(/\./g, '$')] : null) ?? global.Hydro.model.system.get(key);
+        return (this.ctx ? this.ctx.domain?.config?.[key.replace(/\./g, '$')] : null) ?? global.Hydro.model.system.get(key);
     }
 }
 

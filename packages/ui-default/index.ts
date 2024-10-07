@@ -159,6 +159,7 @@ export function apply(ctx: Context) {
         SystemModel.get('server.url'),
         SystemModel.get('server.cdn'),
       ],
+      assets: ((SystemModel.get('ui-default.assets') || '').split(',')).filter((i) => i) || [],
       domains: SystemModel.get('ui-default.domains') || [],
     };
   });
