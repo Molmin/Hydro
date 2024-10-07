@@ -1,7 +1,7 @@
 {
-    "name": "hydrooj-vjudge-qoj",
+    "name": "hydrooj-countdown",
     "version": "1.0.0",
-    "description": "Remote Judge to QOJ.ac",
+    "description": "",
     "main": "index.ts",
     "author": "Milmon <milmon@qq.com>",
     "license": "MIT"
