@@ -19,14 +19,14 @@ class FpsProblemImportHandler extends Handler {
         if (!result?.fps) throw new BadRequestError('Selected file is not a valid FPS problemset.');
         for (const p of result.fps.item) {
             const markdown = [p.description?.[0], p.input?.[0], p.output?.[0], p.hint?.[0]].some((i) => i?.includes('[md]'));
-            const content = buildContent({
+            let content = buildContent({
                 description: p.description?.[0],
                 input: p.input?.[0],
                 output: p.output?.[0],
                 samples: p.sample_input?.map((input, i) => [input, p.sample_output[i]]),
                 hint: p.hint?.[0],
                 source: p.source?.join(' '),
-            }, 'html').replace(/<math xm<x>lns=/g, '<math xmlns=').replace(/\[\/?md]/g, '');
+            }, 'html', (s) => this.translate(s)).replace(/<math xm<x>lns=/g, '<math xmlns=').replace(/\[\/?md]/g, '');
             const config: ProblemConfigFile = {
                 time: p.time_limit[0]._ + p.time_limit[0].$.unit,
                 memory: p.memory_limit[0]._ + p.memory_limit[0].$.unit,
@@ -47,7 +47,7 @@ class FpsProblemImportHandler extends Handler {
                 // `filename` attribute introduced by winterant/OnlineJudge
                 // PLEASE, respect the spec
                 const filename = node.$?.filename || `${id}.${ext}`;
-                const c = node._ || node;
+                const c = node._ || (typeof node === 'string' ? node : '');
                 tasks.push(ProblemModel.addTestdata(domainId, pid, filename, Buffer.from(c)));
             };
             if (p.test_output) {
@@ -61,6 +61,14 @@ class FpsProblemImportHandler extends Handler {
                     addTestdata(p.test_input[2 * i], `${i + 1}`, 'in');
                     addTestdata(p.test_input[2 * i + 1], `${i + 1}`, 'out');
                 }
+            }
+            if (p.img?.length) {
+                for (const img of p.img) {
+                    const filename = String.random(8) + img.src[0].split('/').pop().split('.').pop();
+                    tasks.push(ProblemModel.addAdditionalFile(domainId, pid, filename, Buffer.from(img.base64[0], 'base64')));
+                    content = content.replace(img.src[0], `file://${filename}`);
+                }
+                await ProblemModel.edit(domainId, pid, { content });
             }
             await Promise.all(tasks);
             if (p.solution) {

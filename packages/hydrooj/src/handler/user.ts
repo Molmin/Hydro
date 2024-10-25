@@ -119,6 +119,16 @@ class UserSudoHandler extends Handler {
     }
 }
 
+class UserTFAHandler extends Handler {
+    @param('q', Types.String)
+    async get({ }, q: string) {
+        let udoc = await user.getByUname('system', q);
+        udoc ||= await user.getByEmail('system', q);
+        if (!udoc) this.response.body = { tfa: false, authn: false };
+        else this.response.body = { tfa: udoc.tfa, authn: udoc.authn };
+    }
+}
+
 class UserWebauthnHandler extends Handler {
     noCheckPermView = true;
 
@@ -271,6 +281,7 @@ class UserRegisterWithCodeHandler extends Handler {
         if (mailDomain === 'qq.com' && !Number.isNaN(+id)) $set.avatar = `qq:${id}`;
         if (this.session.viewLang) $set.viewLang = this.session.viewLang;
         if (Object.keys($set).length) await user.setById(uid, $set);
+        if (Object.keys(this.tdoc.setInDomain || {}).length) await domain.setUserInDomain(domainId, uid, this.tdoc.setInDomain);
         if (this.tdoc.oauth) await oauth.set(this.tdoc.oauth[1], uid);
         this.context.HydroContext.user = await user.getById(domainId, uid);
         this.session.viewLang = '';
@@ -347,25 +358,22 @@ class UserDetailHandler extends Handler {
     async get(domainId: string, uid: number) {
         if (uid === 0) throw new UserNotFoundError(0);
         const isSelfProfile = this.user._id === uid;
-        const [udoc, sdoc, union] = await Promise.all([
+        const [udoc, sdoc] = await Promise.all([
             user.getById(domainId, uid),
             token.getMostRecentSessionByUid(uid, ['createAt', 'updateAt']),
-            domain.get(domainId),
         ]);
         if (!udoc) throw new UserNotFoundError(uid);
         const pdocs: ProblemDoc[] = [];
         const acInfo: Record<string, number> = {};
         const canViewHidden = this.user.hasPerm(PERM.PERM_VIEW_PROBLEM_HIDDEN) || this.user._id;
         if (this.user.hasPerm(PERM.PERM_VIEW_PROBLEM)) {
-            await Promise.all([domainId, ...(union?.union || [])].map(async (did) => {
-                const psdocs = await problem.getMultiStatus(did, { uid, status: STATUS.STATUS_ACCEPTED }).toArray();
-                pdocs.push(...Object.values(
-                    await problem.getList(
-                        did, psdocs.map((i) => i.docId), canViewHidden,
-                        false, problem.PROJECTION_LIST, true,
-                    ),
-                ));
-            }));
+            const psdocs = await problem.getMultiStatus(domainId, { uid, status: STATUS.STATUS_ACCEPTED }).toArray();
+            pdocs.push(...Object.values(
+                await problem.getList(
+                    domainId, psdocs.map((i) => i.docId), canViewHidden,
+                    false, problem.PROJECTION_LIST, true,
+                ),
+            ));
         }
         for (const pdoc of pdocs) {
             for (const tag of pdoc.tag) {
@@ -456,7 +464,7 @@ class OauthCallbackHandler extends Handler {
                     break;
                 }
             }
-            const set: Partial<Udoc> = { oauth: args.type };
+            const set: Partial<Udoc> = { ...(r.set || {}), oauth: args.type };
             if (r.bio) set.bio = r.bio;
             if (r.viewLang) set.viewLang = r.viewLang;
             if (r.avatar) set.avatar = r.avatar;
@@ -468,6 +476,7 @@ class OauthCallbackHandler extends Handler {
                     username,
                     redirect: this.domain.registerRedirect,
                     set,
+                    setInDomain: r.setInDomain,
                     oauth: [args.type, r._id],
                 },
             );
@@ -498,6 +507,7 @@ export async function apply(ctx: Context) {
     ctx.Route('user_login', '/login', UserLoginHandler);
     ctx.Route('user_oauth', '/oauth/:type', OauthHandler);
     ctx.Route('user_sudo', '/user/sudo', UserSudoHandler, PRIV.PRIV_USER_PROFILE);
+    ctx.Route('user_tfa', '/user/tfa', UserTFAHandler);
     ctx.Route('user_webauthn', '/user/webauthn', UserWebauthnHandler);
     ctx.Route('user_oauth_callback', '/oauth/:type/callback', OauthCallbackHandler);
     ctx.Route('user_register', '/register', UserRegisterHandler, PRIV.PRIV_REGISTER_USER);
@@ -521,8 +531,6 @@ export async function apply(ctx: Context) {
             ['regat', 'Date!'],
             ['priv', 'Int!', 'User Privilege'],
             ['avatarUrl', 'String'],
-            ['tfa', 'Boolean!'],
-            ['authn', 'Boolean!'],
             ['displayName', 'String @if(perm: "PERM_VIEW_DISPLAYNAME")'],
             ['rpInfo', 'JSONObject'],
         ]);
