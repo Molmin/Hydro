@@ -1,0 +1,8 @@
+{
+    "name": "hydrooj-edit-owner",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.ts",
+    "author": "Milmon <milmon@qq.com>",
+    "license": "MIT"
+}
