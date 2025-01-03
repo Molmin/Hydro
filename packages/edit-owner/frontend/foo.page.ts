@@ -1,9 +1,9 @@
-import $ from 'jquery';
 import {
   addPage, i18n, NamedPage, request,
 } from '@hydrooj/ui-default';
 
 addPage(new NamedPage(['problem_detail'], () => {
+  if (UserContext.priv !== -1) return;
   $('.section.side ol.menu').append(`
     <li class="menu__item nojs--hide"><a class="menu__link" href="javascript:;" name="problem-sidebar__edit-owner">
       <span class="icon icon-edit"></span> ${i18n('Edit owner')}
