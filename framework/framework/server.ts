@@ -86,6 +86,7 @@ export type KoaContext = Koa.Context & {
     handler: any;
     request: Koa.Request & { body: any, files: Files };
     session: Record<string, any>;
+    holdFiles: (string | File)[];
 };
 
 const logger = new Logger('server');
@@ -141,8 +142,8 @@ export class HandlerCommon {
     url(name: string, ...kwargsList: Record<string, any>[]) {
         if (name === '#') return '#';
         let res = '#';
-        const args: any = {};
-        const query: any = {};
+        const args: any = Object.create(null);
+        const query: any = Object.create(null);
         for (const kwargs of kwargsList) {
             for (const key in kwargs) {
                 args[key] = kwargs[key].toString().replace(/\//g, '%2F');
@@ -197,6 +198,10 @@ export class Handler extends HandlerCommon {
         this.response.template = null;
         this.response.type = 'application/octet-stream';
         if (name) this.response.disposition = `attachment; filename="${encodeRFC5987ValueChars(name)}"`;
+    }
+
+    holdFile(name: string | File) {
+        this.context.holdFiles.push(name);
     }
 
     async init() {
@@ -325,14 +330,14 @@ export interface WebServiceConfig {
 }
 
 export class WebService extends Service {
-    private registry: Record<string, any> = {};
+    private registry: Record<string, any> = Object.create(null);
     private registrationCount = Counter();
     private serverLayers = [];
     private handlerLayers = [];
     private wsLayers = [];
-    private captureAllRoutes = {};
+    private captureAllRoutes = Object.create(null);
 
-    renderers: Record<string, RendererFunction> = {};
+    renderers: Record<string, RendererFunction> = Object.create(null);
     server = koa;
     router = router;
     HandlerCommon = HandlerCommon;
@@ -394,6 +399,20 @@ ${c.response.status} ${endTime - startTime}ms ${c.response.length}`);
                     keepExtensions: true,
                 },
             }));
+            this.server.use(async (c, next) => {
+                c.holdFiles = [];
+                try {
+                    await next();
+                } finally {
+                    if (Object.keys(c.request.files || {}).length) {
+                        for (const k in c.request.files) {
+                            if (c.holdFiles.includes(k)) continue;
+                            const files = Array.isArray(c.request.files[k]) ? c.request.files[k] : [c.request.files[k]];
+                            for (const f of files) if (!c.holdFiles.includes(f as any)) fs.rmSync(f.filepath);
+                        }
+                    }
+                }
+            });
             this.ctx.on('dispose', () => {
                 fs.emptyDirSync(uploadDir);
             });

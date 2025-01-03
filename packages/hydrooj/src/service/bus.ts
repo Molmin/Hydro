@@ -38,11 +38,12 @@ export interface EventMap extends KnownHandlerEvents {
     'database/config': () => VoidReturn
 
     'system/setting': (args: Record<string, any>) => VoidReturn
-    'bus/broadcast': (event: keyof EventMap | keyof ServerEvents, payload: any) => VoidReturn
+    'bus/broadcast': (event: keyof EventMap | keyof ServerEvents, payload: any, trace?: string) => VoidReturn
     'monitor/update': (type: 'server' | 'judge', $set: any) => VoidReturn
     'monitor/collect': (info: any) => VoidReturn
     'api/update': () => void;
     'task/daily': () => void;
+    'task/daily/finish': (pref: Record<string, number>) => void;
 
     'user/message': (uid: number, mdoc: MessageDoc) => void
     'user/get': (udoc: User) => void

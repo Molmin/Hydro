@@ -1,6 +1,6 @@
-import fs from 'fs';
 import { resolve } from 'path';
 import cac from 'cac';
+import fs from 'fs-extra';
 import proxy from 'koa-proxies';
 import cache from 'koa-static-cache';
 import { type FindCursor, ObjectId } from 'mongodb';
@@ -197,8 +197,8 @@ export async function apply(ctx: Context) {
             url(name: string, ...kwargsList: Record<string, any>[]) {
                 if (name === '#') return '#';
                 let res = '#';
-                const args: any = {};
-                const query: any = {};
+                const args: any = Object.create(null);
+                const query: any = Object.create(null);
                 for (const kwargs of kwargsList) {
                     for (const key in kwargs) {
                         if (kwargs[key] instanceof ObjectId) args[key] = kwargs[key].toHexString();

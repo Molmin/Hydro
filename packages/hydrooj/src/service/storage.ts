@@ -209,7 +209,8 @@ class RemoteStorageService {
             Key: target,
             ResponseContentDisposition: filename ? `attachment; filename="${encodeRFC5987ValueChars(filename)}"` : '',
         }), {
-            expiresIn: noExpire ? 24 * 60 * 60 * 7 : 10 * 60,
+            // aliyun s3 will reject download if expires >= 7 days
+            expiresIn: noExpire ? 24 * 60 * 60 * 7 - 1 : 30 * 60,
         });
         // using something like /fs/
         if (useAlternativeEndpointFor && this.replaceWithAlternativeUrlFor[useAlternativeEndpointFor]) {
@@ -274,7 +275,7 @@ class LocalStorageService {
         target = resolve(this.dir, convertPath(target));
         await ensureDir(dirname(target));
         if (typeof file === 'string') await copyFile(file, target);
-        else if (file instanceof Buffer) await writeFile(target, file);
+        else if (Buffer.isBuffer(file)) await writeFile(target, file);
         else await writeFile(target, await streamToBuffer(file));
     }
 

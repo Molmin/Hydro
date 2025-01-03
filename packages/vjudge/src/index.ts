@@ -42,8 +42,6 @@ class AccountService {
     }
 
     async judge(task) {
-        const rdoc = await RecordModel.get(task.domainId, task.rid);
-        task = Object.assign(rdoc, task);
         const next = (payload) => JudgeHandler.next({ ...payload, rid: task.rid, domainId: task.domainId });
         const end = (payload) => JudgeHandler.end({ ...payload, rid: task.rid, domainId: task.domainId });
         await next({ status: STATUS.STATUS_FETCHED });
@@ -55,7 +53,7 @@ class AccountService {
             }
             if (langConfig.validAs?.[this.account.type]) task.lang = langConfig.validAs[this.account.type];
             const comment = langConfig.comment;
-            if (comment) {
+            if (comment && !this.Provider.noComment) {
                 const msg = `Hydro submission #${task.rid}@${new Date().getTime()}`;
                 if (typeof comment === 'string') task.code = `${comment} ${msg}\n${task.code}`;
                 else if (comment instanceof Array) task.code = `${comment[0]} ${msg} ${comment[1]}\n${task.code}`;
@@ -185,7 +183,7 @@ class VJudgeService extends Service {
     }
 
     addProvider(type: string, provider: BasicProvider, override = false) {
-        if (process.env.VJUDGE_DEBUG && process.env.VJUDGE_DEBUG !== type) return;
+        if (process.env.VJUDGE_DEBUG && !(`,${process.env.VJUDGE_DEBUG},`).includes(`,${type},`)) return;
         if (!override && this.providers[type]) throw new Error(`duplicate provider ${type}`);
         this.providers[type] = provider;
         for (const account of this.accounts.filter((a) => a.type === type)) {

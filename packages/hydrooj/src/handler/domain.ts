@@ -53,6 +53,9 @@ class DomainEditHandler extends ManageHandler {
     async post(args) {
         if (args.operation) return;
         const $set = {};
+        const booleanKeys = args.booleanKeys || {};
+        delete args.booleanKeys;
+        for (const key in booleanKeys) if (!args[key]) $set[key] = false;
         for (const key in args) {
             if (DOMAIN_SETTINGS_BY_KEY[key]) $set[key] = args[key];
         }
@@ -96,7 +99,8 @@ class DomainDashboardHandler extends ManageHandler {
 
 class DomainUserHandler extends ManageHandler {
     @requireSudo
-    async get({ domainId }) {
+    @param('format', Types.Range(['default', 'raw']), true)
+    async get({ domainId }, format = 'default') {
         const rudocs = {};
         const [dudocs, roles] = await Promise.all([
             domain.getMultiUserInDomain(domainId, {
@@ -107,15 +111,13 @@ class DomainUserHandler extends ManageHandler {
             }).toArray(),
             domain.getRoles(domainId),
         ]);
-        const uids = dudocs.map((dudoc) => dudoc.uid);
-        const udict = await user.getList(domainId, uids);
-        for (const role of roles) rudocs[role._id] = [];
-        for (const dudoc of dudocs) {
-            const udoc = udict[dudoc.uid];
-            if (!(udoc.priv & PRIV.PRIV_USER_PROFILE)) continue;
-            rudocs[udoc.role || 'default'].push(udoc);
+        // TODO: switch to getListForRender for better performance
+        const udict = await user.getList(domainId, dudocs.map((dudoc) => dudoc.uid));
+        const users = dudocs.filter((dudoc) => udict[dudoc.uid].priv & PRIV.PRIV_USER_PROFILE);
+        for (const role of roles) {
+            rudocs[role._id] = users.filter((dudoc) => dudoc.role === role._id).map((i) => udict[i.uid]);
         }
-        this.response.template = 'domain_user.html';
+        this.response.template = format === 'raw' ? 'domain_user_raw.html' : 'domain_user.html';
         this.response.body = {
             roles, rudocs, udict, domain: this.domain,
         };

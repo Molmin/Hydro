@@ -111,6 +111,33 @@ Hydro 用户群：1085853538
 <details>
 <summary><h2>更新日志（点击展开）</h2></summary>
 
+## Hydro 4.18.2 / UI 4.56.2
+
+- core: 修复提交答案题压缩包提交 (#917)
+- ui: 优化 domain_user 页面性能
+- core: 优化评测任务调度
+- ui: 下载文件失败时自动重试
+- core: Consumer: 从错误中自动恢复
+
+## Hydro 4.18.0 / UI 4.56.0
+
+- core&ui: ScoreboardView API
+- onsite-toolkit: Resolver
+- core: 优化 icpc 格式导入
+- core: 添加 limit.pretest 选项
+- core: 添加 task/daily 性能日志
+- framework: 默认移除 UiContext 和 UserContext
+
+## Hydro 4.17.4 / UI 4.55.3
+
+- core: 修复 markdown 模式下使用 HTML 导入时解析异常
+- core: 允许复制引用的题目
+- core&judge: 添加 trusted 选项
+- core: 修复导入用户 metadata 解析
+- core: 修改 pid 校验格式
+- ui: 禁用自动播放
+- core: 题目列表性能优化
+
 ## Hydro 4.17.3 / UI 4.55.2
 
 - core: 限制显示名长度
@@ -124,7 +151,6 @@ Hydro 用户群：1085853538
 - core: 支持 StorageModel.copy 和 StorageModel.exists
 - core: 弃用 ProblemModel.list
 - core: 添加 user/import/parse 和 user/import/create 钩子
-- core: 优化题目列表查询性能
 
 ## Hydro 4.16.0 / UI 4.54.3
 
