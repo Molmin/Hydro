@@ -1,6 +1,6 @@
 import {
     Context, Handler, post,
-    ProblemModel, ProblemNotFoundError, route,
+    PRIV, ProblemModel, ProblemNotFoundError, route,
     Types, UserModel, UserNotFoundError,
 } from 'hydrooj';
 
@@ -21,4 +21,7 @@ export class ProblemEditOwnerHandler extends Handler {
 
 export function apply(ctx: Context) {
     ctx.Route('problem_edit_owner', '/p/:pid/edit_owner', ProblemEditOwnerHandler, PRIV.PRIV_EDIT_SYSTEM);
+    ctx.i18n.load('zh', {
+        'Edit owner': '编辑所有者',
+    });
 }
