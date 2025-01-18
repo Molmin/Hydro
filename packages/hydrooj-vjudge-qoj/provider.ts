@@ -148,7 +148,7 @@ export default class QOJProvider extends BasicFetcher implements IBasicProvider 
         const { window: { document } } = new JSDOM(text);
         const eles = Array.from(document.querySelectorAll('div.table-responsive>table>tbody>tr>td:first-child'));
         const pids = eles.map((i) => i.textContent.replace(/^#/, 'P'));
-        return pids.length > 0 ? pids : ['P0'];
+        return pids.length > 0 ? pids : page <= 125 ? ['P0'] : [];
     }
 
     async submitProblem(id: string, lang: string, code: string) {
