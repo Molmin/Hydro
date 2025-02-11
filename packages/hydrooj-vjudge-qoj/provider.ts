@@ -20,6 +20,18 @@ const MAPPING = {
     十: 10,
 };
 
+function getStatus(message: string): STATUS | null {
+    if (message === 'Accepted' || message.includes('Extra Test Passed')) return STATUS.STATUS_ACCEPTED;
+    if (message.includes('Acceptable Answer')) return STATUS.STATUS_WRONG_ANSWER;
+    if (message.includes('Time Limit Exceeded')) return STATUS.STATUS_TIME_LIMIT_EXCEEDED;
+    if (message.includes('Runtime Error')) return STATUS.STATUS_RUNTIME_ERROR;
+    if (message.includes('Wrong Answer')) return STATUS.STATUS_WRONG_ANSWER;
+    if (message.includes('Skipped')) return STATUS.STATUS_WRONG_ANSWER;
+    if (message.includes('Memory Limit Exceeded')) return STATUS.STATUS_MEMORY_LIMIT_EXCEEDED;
+    if (message.includes('Dangerous Syscalls')) return STATUS.STATUS_RUNTIME_ERROR;
+    return null;
+}
+
 export default class QOJProvider extends BasicFetcher implements IBasicProvider {
     constructor(public account: RemoteAccount, private save: (data: any) => Promise<void>) {
         super(account, 'https://qoj.ac', 'form', logger);
@@ -160,52 +172,110 @@ export default class QOJProvider extends BasicFetcher implements IBasicProvider 
             answer_answer_upload_type: 'editor',
             answer_answer_editor: code,
             'submit-answer': 'answer',
-        });
+        }).retry(10);
         if (!text.includes('<title>Submissions - QOJ.ac</title>')) throw new Error('Submit fail');
-        const { text: status } = await this.get(`/submissions?problem_id=${id.split('P')[1]}&submitter=${this.account.handle}`);
+        const { text: status } = await this.get(`/submissions?problem_id=${id.split('P')[1]}&submitter=${this.account.handle}`).retry(10);
         const $dom = new JSDOM(status);
         return $dom.window.document.querySelector('tbody>tr>td>a').innerHTML.split('#')[1];
     }
 
     // eslint-disable-next-line consistent-return
     async waitForSubmission(id: string, next, end) {
-        let count = 0;
+        let count = 0; let failCount = 0;
         // eslint-disable-next-line no-constant-condition
-        while (count < 120) {
+        while (count < 500) {
             count++;
             await sleep(3000);
-            const { text } = await this.get(`/submission/${id}`);
-            const { window: { document } } = new JSDOM(text);
-            if (text.includes('Compile Error')) {
-                await next({ compilerText: document.querySelector('.uoj-content > .card:last-child > .card-body > pre').textContent });
+            try {
+                const { text } = await this.get(`/submission/${id}`);
+                failCount = 0;
+                const { window: { document } } = new JSDOM(text);
+                if (text.includes('Compile Error')) {
+                    await next({ compilerText: document.querySelector('.uoj-content > .card:last-child > .card-body > pre').textContent });
+                    return await end({
+                        status: STATUS.STATUS_COMPILE_ERROR, score: 0, time: 0, memory: 0,
+                    });
+                }
+                const summary = document.querySelector('tbody>tr');
+                if (!summary) continue;
+                let time = 0;
+                let memory = 0;
+                try {
+                    time = parseTimeMS(summary.children[4].innerHTML);
+                } catch (e) { }
+                try {
+                    memory = parseMemoryMB(summary.children[5].innerHTML) * 1024;
+                } catch (e) { }
+                if (document.querySelector('tbody').innerHTML.includes('Judging') || document.querySelector('tbody').innerHTML.includes('Waiting')) {
+                    await next({ status: STATUS.STATUS_JUDGING });
+                    continue;
+                }
+                // eslint-disable-next-line no-unsafe-optional-chaining
+                const score = +document.querySelector('.uoj-score').getAttribute('data-score') || 0;
+                const fullScore = +document.querySelector('.uoj-score').getAttribute('data-full') || 0;
+                const status = score === fullScore ? STATUS.STATUS_ACCEPTED : STATUS.STATUS_WRONG_ANSWER;
+                try {
+                    const base = document.querySelector('#details_details_accordion');
+                    if (!base) throw new Error('Cannot view details');
+                    let subtaskId = 0;
+                    const cases: any[] = [];
+                    const subtasks: Record<string, { score: number; status: number }> = {};
+                    for (const row of base.querySelectorAll('div.card-header > div.row')) {
+                        const title = row.querySelector('.card-title')?.textContent;
+                        if (title?.startsWith('Dependency')) continue;
+                        if (title?.startsWith('Subtask')) {
+                            subtaskId = +title.replace(/[^0-9]/g, '');
+                            const subtask = {
+                                score: 0,
+                                status: STATUS.STATUS_WRONG_ANSWER,
+                            };
+                            for (const col of row.querySelectorAll('div.col-sm-2, div.col-sm-3')) {
+                                const t = col.textContent?.trim() || '';
+                                if (t?.startsWith('score: ')) subtask.score = +t.replace(/^score: /, '');
+                                else subtask.status = getStatus(t) || subtask.status;
+                            }
+                            subtasks[subtaskId] = subtask;
+                            continue;
+                        }
+                        if (title?.startsWith('Extra Test')) subtaskId++;
+                        const c = {
+                            id: +title.replace(/[^0-9]/g, ''),
+                            subtaskId,
+                            score: 0,
+                            status: STATUS.STATUS_WRONG_ANSWER,
+                            time: 0,
+                            memory: 0,
+                            message: '',
+                        };
+                        for (const pre of row.parentElement?.parentElement?.querySelectorAll('.card-body > pre') || []) {
+                            c.message = pre.textContent || '';
+                        }
+                        for (const col of row.querySelectorAll('div.col-sm-2,div.col-sm-3')) {
+                            const t = col.textContent?.trim() || '';
+                            if (t?.startsWith('score: ')) c.score = +t.replace(/^score: /, '');
+                            else if (t?.startsWith('time: ')) c.time = parseTimeMS(t.replace(/^time: /, ''));
+                            else if (t?.startsWith('memory: ')) c.memory = parseMemoryMB(t.replace(/^memory: /, ''));
+                            else c.status = getStatus(t) || c.status;
+                        }
+                        if (title === 'Extra Test:' && c.status === STATUS.STATUS_ACCEPTED) continue;
+                        cases.push(c);
+                    }
+                    await next({ status: STATUS.STATUS_JUDGING, cases, subtasks });
+                } catch (e) {
+                    logger.error(e);
+                    await next({ status: STATUS.STATUS_JUDGING, message: 'Testcases detail parsing failed.' });
+                }
                 return await end({
-                    status: STATUS.STATUS_COMPILE_ERROR, score: 0, time: 0, memory: 0,
+                    status,
+                    score,
+                    time,
+                    memory,
                 });
+            } catch (e) {
+                logger.error(e);
+                failCount++;
+                if (failCount >= 5) throw new Error('Unable to get the judge result for 5 consecutive times.');
             }
-            const summary = document.querySelector('tbody>tr');
-            if (!summary) continue;
-            let time = 0;
-            let memory = 0;
-            try {
-                time = parseTimeMS(summary.children[4].innerHTML);
-            } catch (e) { }
-            try {
-                memory = parseMemoryMB(summary.children[5].innerHTML) * 1024;
-            } catch (e) { }
-            if (document.querySelector('tbody').innerHTML.includes('Judging') || document.querySelector('tbody').innerHTML.includes('Waiting')) {
-                await next({ status: STATUS.STATUS_JUDGING });
-                continue;
-            }
-            // eslint-disable-next-line no-unsafe-optional-chaining
-            const score = +document.querySelector('.uoj-score').getAttribute('data-score') || 0;
-            const fullScore = +document.querySelector('.uoj-score').getAttribute('data-full') || 0;
-            const status = score === fullScore ? STATUS.STATUS_ACCEPTED : STATUS.STATUS_WRONG_ANSWER;
-            return await end({
-                status,
-                score,
-                time,
-                memory,
-            });
         }
     }
 }
