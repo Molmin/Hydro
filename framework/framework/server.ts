@@ -8,7 +8,7 @@ import Koa from 'koa';
 import Body from 'koa-body';
 import Compress from 'koa-compress';
 import { Shorty } from 'shorty.js';
-import { WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import {
     Counter, errorMessage, isClass, Logger, parseMemoryMB,
 } from '@hydrooj/utils/lib/utils';
